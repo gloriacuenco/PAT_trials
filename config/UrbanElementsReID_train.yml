@@ -36,7 +36,7 @@ INPUT:
 DATASETS:
   TRAIN: ('UrbanElementsReID',)
   TEST: ('UrbanElementsReID',)
-  ROOT_DIR: '/kaggle/input/Urban2026/Urban2026'
+  ROOT_DIR: '/kaggle/input/urban2026/Urban2026'
 
 DATALOADER:
   SAMPLER: 'softmax_triplet'
