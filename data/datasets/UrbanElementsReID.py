@@ -54,6 +54,7 @@ class UrbanElementsReID(ImageDataset):
         camids = []
         imageNames = []
         pids = []
+        classes = []
         with open(csv_dir, newline='') as csvfile:
             reader = csv.reader(csvfile, delimiter=',')
             next(reader)
@@ -61,8 +62,12 @@ class UrbanElementsReID(ImageDataset):
                 camids.append(row[0])
                 imageNames.append(str(row[1]))
                 pids.append(int(row[2]))
+                if len(row) > 3:
+                    classes.append(row[3])
+                else:
+                    classes.append("")
         
-        return list(zip(camids, imageNames, pids))
+        return list(zip(camids, imageNames, pids, classes))
     
     def _readCSV_eval_(self, csv_dir):
         camids = []
@@ -79,23 +84,25 @@ class UrbanElementsReID(ImageDataset):
         return list(zip(camids, imageNames, pids))
     
     def _process_dir(self, dir_path, relabel=False):
-        xml_dir = osp.join(self.dataset_dir, 'train.csv')
+        xml_dir = osp.join(self.dataset_dir, 'train_classes.csv')
+        if not osp.exists(xml_dir):
+            xml_dir = osp.join(self.dataset_dir, 'train.csv')
         xml_file = self._readCSV_(xml_dir)
 
         pid_container = set()
 
-        for _, _, pid in xml_file:
+        for _, _, pid, _ in xml_file:
             if pid == -1: continue
             pid_container.add(pid)       
         pid2label = {pid: label for label, pid in enumerate(pid_container)}
         
         dataset = []
 
-        for camid, imageName, pid in xml_file:
+        for camid, imageName, pid, macro_class in xml_file:
             camid = int(camid[1:])
             if pid == -1: continue
             if relabel: pid = pid2label[pid]
-            dataset.append((osp.join(dir_path, imageName), pid, camid))
+            dataset.append((osp.join(dir_path, imageName), pid, camid, {'macro_class': macro_class}))
                 
         return dataset
     

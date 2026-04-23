@@ -3,6 +3,7 @@ from .softmax_loss import CrossEntropyLabelSmooth, LabelSmoothingCrossEntropy
 from .triplet_loss import TripletLoss
 from .center_loss import CenterLoss
 from .ce_labelSmooth import CrossEntropyLabelSmooth as CE_LS
+from .class_aware_triplet_loss import ClassAwareTripletLoss
 
 feat_dim_dict = {
     'local_attention_vit': 768,
@@ -26,6 +27,9 @@ def build_loss(cfg, num_classes):
         else:
             triplet = TripletLoss(cfg.SOLVER.MARGIN)  # triplet loss
             print("using triplet loss with margin:{}".format(cfg.SOLVER.MARGIN))
+    elif 'class_aware_triplet' in cfg.MODEL.METRIC_LOSS_TYPE:
+        triplet = ClassAwareTripletLoss(cfg.MODEL.CLASS_AWARE_MARGIN_1, cfg.MODEL.CLASS_AWARE_MARGIN_2)
+        print("using class aware triplet loss with margins: {} and {}".format(cfg.MODEL.CLASS_AWARE_MARGIN_1, cfg.MODEL.CLASS_AWARE_MARGIN_2))
     else:
         print('expected METRIC_LOSS_TYPE should be triplet'
               'but got {}'.format(cfg.MODEL.METRIC_LOSS_TYPE))
@@ -43,8 +47,8 @@ def build_loss(cfg, num_classes):
 
     # softmax & triplet
     elif cfg.DATALOADER.SAMPLER == 'softmax_triplet' or 'GS':
-        def loss_func(score, feat, target, domains=None, t_domains=None, all_posvid=None, soft_label=False, soft_weight=0.1, soft_lambda=0.2):
-            if cfg.MODEL.METRIC_LOSS_TYPE == 'triplet':
+        def loss_func(score, feat, target, domains=None, t_domains=None, all_posvid=None, soft_label=False, soft_weight=0.1, soft_lambda=0.2, macro_classes=None):
+            if cfg.MODEL.METRIC_LOSS_TYPE == 'triplet' or cfg.MODEL.METRIC_LOSS_TYPE == 'class_aware_triplet':
                 if cfg.MODEL.IF_LABELSMOOTH == 'on':
                     if name == 'local_attention_vit' and cfg.MODEL.PC_LOSS:
                         ID_LOSS = xent(score, target, all_posvid=all_posvid, soft_label=soft_label,soft_weight=soft_weight, soft_lambda=soft_lambda)
@@ -53,7 +57,10 @@ def build_loss(cfg, num_classes):
                 else:
                     ID_LOSS = F.cross_entropy(score, target)
 
-                TRI_LOSS = triplet(feat, target)[0]
+                if cfg.MODEL.METRIC_LOSS_TYPE == 'class_aware_triplet' and macro_classes is not None:
+                    TRI_LOSS = triplet(feat, target, macro_classes)[0]
+                else:
+                    TRI_LOSS = triplet(feat, target)[0]
                 # DOMAIN_LOSS = xent(domains, t_domains)
                 return cfg.MODEL.ID_LOSS_WEIGHT * ID_LOSS + \
                                cfg.MODEL.TRIPLET_LOSS_WEIGHT * TRI_LOSS

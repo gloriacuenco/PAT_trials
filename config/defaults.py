@@ -40,8 +40,10 @@ _C.MODEL.ID_LOSS_TYPE = 'softmax'
 _C.MODEL.ID_LOSS_WEIGHT = 1.0
 _C.MODEL.TRIPLET_LOSS_WEIGHT = 1.0
 
-# ID/triplet
+# ID/triplet/class_aware_triplet
 _C.MODEL.METRIC_LOSS_TYPE = 'triplet'
+_C.MODEL.CLASS_AWARE_MARGIN_1 = 0.3
+_C.MODEL.CLASS_AWARE_MARGIN_2 = 0.1
 # If train with multi-gpu ddp mode, options: 'True', 'False'
 _C.MODEL.DIST_TRAIN = False
 # If train with soft triplet loss, options: 'True', 'False'
@@ -87,6 +89,9 @@ _C.INPUT.REA = CN()
 _C.INPUT.REA.ENABLED = False
 _C.INPUT.REA.PROB = 0.5
 _C.INPUT.REA.MEAN = [123.675, 116.28, 103.53]
+_C.INPUT.REA.SH = 0.15
+_C.INPUT.REA.SL = 0.02
+_C.INPUT.REA.R1 = 0.3
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [0.485, 0.456, 0.406]
 # Values to be used for image normalization
@@ -105,11 +110,11 @@ _C.INPUT.PADDING = 10
 # Random color jitter
 _C.INPUT.CJ = CN()
 _C.INPUT.CJ.ENABLED = False
-_C.INPUT.CJ.PROB = 1.0
+_C.INPUT.CJ.PROB = 0.5
 _C.INPUT.CJ.BRIGHTNESS = 0.15
 _C.INPUT.CJ.CONTRAST = 0.15
-_C.INPUT.CJ.SATURATION = 0.1
-_C.INPUT.CJ.HUE = 0.1
+_C.INPUT.CJ.SATURATION = 0.10
+_C.INPUT.CJ.HUE = 0.05
 # Local Grayscale Transfomation
 _C.INPUT.LGT = CN()
 _C.INPUT.LGT.DO_LGT = False

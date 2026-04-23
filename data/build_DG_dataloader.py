@@ -42,18 +42,23 @@ def build_reid_train_loader(cfg):
             dataset = DATASET_REGISTRY.get(d)(root=_root, combineall=cfg.DATASETS.COMBINEALL)
         if comm.is_main_process():
             dataset.show_train()
-        if len(dataset.train[0]) < 4:
-            for i, x in enumerate(dataset.train):
-                add_info = {}  # dictionary
+        for i, x in enumerate(dataset.train):
+            train_item = list(dataset.train[i])
+            if len(train_item) < 4:
+                train_item.append({})
+            
+            add_info = train_item[3]
+            if not isinstance(add_info, dict):
+                add_info = {}
+                train_item[3] = add_info
 
-                if cfg.DATALOADER.CAMERA_TO_DOMAIN:
-                    add_info['domains'] = dataset.train[i][2]
-                    camera_all.append(dataset.train[i][2])
-                else:
-                    add_info['domains'] = int(domain_idx)
-                dataset.train[i] = list(dataset.train[i])
-                dataset.train[i].append(add_info)
-                dataset.train[i] = tuple(dataset.train[i])
+            if cfg.DATALOADER.CAMERA_TO_DOMAIN:
+                add_info['domains'] = train_item[2]
+                camera_all.append(train_item[2])
+            else:
+                add_info['domains'] = int(domain_idx)
+            
+            dataset.train[i] = tuple(train_item)
         domain_idx += 1
         train_items.extend(dataset.train)
 

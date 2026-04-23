@@ -88,6 +88,7 @@ def part_attention_vit_do_train_with_amp(cfg,
             camid = informations['camid']
             img_path = informations['img_path']
             t_domains = informations['others']['domains']
+            macro_classes = informations['others'].get('macro_class', None) if 'macro_class' in informations['others'] else None
 
             optimizer.zero_grad()
             img = img.to(device)
@@ -113,10 +114,10 @@ def part_attention_vit_do_train_with_amp(cfg,
                     loss2: reid-specific loss
                     (ID + Triplet loss)
                     '''
-                    reid_loss = loss_fn(score, layerwise_global_feat[-1], target, all_posvid=all_posvid, soft_label=cfg.MODEL.SOFT_LABEL, soft_weight=cfg.MODEL.SOFT_WEIGHT, soft_lambda=cfg.MODEL.SOFT_LAMBDA)
+                    reid_loss = loss_fn(score, layerwise_global_feat[-1], target, all_posvid=all_posvid, soft_label=cfg.MODEL.SOFT_LABEL, soft_weight=cfg.MODEL.SOFT_WEIGHT, soft_lambda=cfg.MODEL.SOFT_LAMBDA, macro_classes=macro_classes)
                 else:
                     ploss = torch.tensor([0.]).cuda()
-                    reid_loss = loss_fn(score, layerwise_global_feat[-1], target, soft_label=cfg.MODEL.SOFT_LABEL)
+                    reid_loss = loss_fn(score, layerwise_global_feat[-1], target, soft_label=cfg.MODEL.SOFT_LABEL, macro_classes=macro_classes)
                 
                 total_loss = reid_loss + l_ploss*ploss
 

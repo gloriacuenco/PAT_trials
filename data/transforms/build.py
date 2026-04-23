@@ -80,6 +80,9 @@ def build_transforms(cfg, is_train=True, is_fake=False):
         do_rea = cfg.INPUT.REA.ENABLED
         rea_prob = cfg.INPUT.REA.PROB
         rea_mean = cfg.INPUT.REA.MEAN
+        rea_sh = cfg.INPUT.REA.SH
+        rea_sl = cfg.INPUT.REA.SL
+        rea_r1 = cfg.INPUT.REA.R1
         # random patch
         do_rpt = cfg.INPUT.RPT.ENABLED
         rpt_prob = cfg.INPUT.RPT.PROB
@@ -87,8 +90,6 @@ def build_transforms(cfg, is_train=True, is_fake=False):
         if do_autoaug:
             res.append(AutoAugment(total_iter))
         res.append(T.Resize(size_train, interpolation=3))
-        if do_flip:
-            res.append(T.RandomHorizontalFlip(p=flip_prob))
         if do_pad:
             res.extend([T.Pad(padding, padding_mode=padding_mode),
                         T.RandomCrop(size_train)])
@@ -115,8 +116,7 @@ def build_transforms(cfg, is_train=True, is_fake=False):
             T.Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])
         ])
         if do_rea:
-            from timm.data.random_erasing import RandomErasing as RE
-            res.append(RE(probability=rea_prob, mode='pixel', max_count=1, device='cpu'))
+            res.append(T.RandomErasing(p=rea_prob, scale=(rea_sl, rea_sh), ratio=(rea_r1, 1/rea_r1), value=0))
     else:
         size_test = cfg.INPUT.SIZE_TEST
         res.append(T.Resize(size_test, interpolation=3))

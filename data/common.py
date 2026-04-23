@@ -31,6 +31,21 @@ class CommDataset(Dataset):
             img_path, pid, camid = self.img_items[index]
             others = ''
         img = read_image(img_path)
+        
+        # Custom logic interceptor for horizontal flip
+        from config import cfg
+        import random
+        from PIL import Image
+        if cfg.INPUT.DO_FLIP:
+            skip_flip = False
+            if isinstance(others, dict) and 'macro_class' in others:
+                cls_name = others['macro_class'].lower()
+                if 'trafficsign' in cls_name or 'trafficsignal' in cls_name:
+                    skip_flip = True
+            
+            if not skip_flip and random.random() < cfg.INPUT.FLIP_PROB:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                
         if self.transform is not None: img = self.transform(img)
         if self.relabel: pid = self.pid_dict[pid]
         return {

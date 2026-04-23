@@ -62,6 +62,7 @@ def ori_vit_do_train_with_amp(cfg,
             target_cam = informations['camid']
             # ipath = informations['img_path']
             t_domains = informations['others']['domains']
+            macro_classes = informations['others'].get('macro_class', None) if 'macro_class' in informations['others'] else None
 
             optimizer.zero_grad()
             img = img.to(device)
@@ -73,10 +74,10 @@ def ori_vit_do_train_with_amp(cfg,
             with amp.autocast(enabled=True):
                 if cfg.MODEL.NAME == 'transformer':
                     score, feat, domains = model(img, domains=t_domains)
-                    loss = loss_fn(score, feat, target, domains, t_domains)
+                    loss = loss_fn(score, feat, target, domains=domains, t_domains=t_domains, macro_classes=macro_classes)
                 else:
                     score, feat = model(img)
-                    loss = loss_fn(score, feat, target)
+                    loss = loss_fn(score, feat, target, macro_classes=macro_classes)
 
             scaler.scale(loss).backward()
 
