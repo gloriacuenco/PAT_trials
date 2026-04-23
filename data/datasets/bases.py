@@ -66,18 +66,13 @@ class Dataset(object):
         """Parses data list and returns the number of person IDs
         and the number of camera views.
         Args:
-            data (list): contains tuples of (img_path(s), pid, camid)
+            data (list): contains tuples of (img_path(s), pid, camid, ...)
         """
         pids = set()
         cams = set()
-        if len(data[0]) > 3:
-            for _, pid, camid, _ in data:
-                pids.add(pid)
-                cams.add(camid)
-        else:
-            for _, pid, camid in data:
-                pids.add(pid)
-                cams.add(camid)
+        for item in data:
+            pids.add(item[1])
+            cams.add(item[2])
         return len(pids), len(cams)
 
     def get_num_pids(self, data):
@@ -97,7 +92,10 @@ class Dataset(object):
         combined = copy.deepcopy(self.train)
 
         def _combine_data(data):
-            for img_path, pid, camid, _ in data:
+            for item in data:
+                img_path = item[0]
+                pid = item[1]
+                camid = item[2]
                 if pid in self._junk_pids:
                     continue
                 pid = self.dataset_name + "_" + str(pid)
