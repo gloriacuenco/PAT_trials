@@ -26,6 +26,25 @@ imagenet_path_name = {
     'deit_tiny_patch16_224_TransReID': 'deit_tiny_distilled_patch16_224-b40b3cf7.pth'
 }
 
+imagenet_urls = {
+    'jx_vit_base_p16_224-80ecf9dd.pth': 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_base_p16_224-80ecf9dd.pth',
+    'jx_vit_large_p16_224-4ee7a4dc.pth': 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_large_p16_224-4ee7a4dc.pth',
+}
+
+def download_if_not_exists(model_path, path_name):
+    """Auto-download pretrained weights if they are not found locally."""
+    if not os.path.exists(model_path):
+        if path_name in imagenet_urls:
+            url = imagenet_urls[path_name]
+            print(f"Pretrained weights not found at {model_path}.")
+            print(f"Downloading from {url}...")
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            import urllib.request
+            urllib.request.urlretrieve(url, model_path)
+            print("Download complete.")
+        else:
+            print(f"Warning: {model_path} not found and no URL available to auto-download.")
+
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
     if classname.find('Linear') != -1:
@@ -194,6 +213,7 @@ class build_vit(nn.Module):
         elif cfg.MODEL.TRANSFORMER_TYPE == 'vit_large_patch16_224_TransReID':
             self.in_planes = 1024
         if self.pretrain_choice == 'imagenet':
+            download_if_not_exists(self.model_path, path)
             self.base.load_param(self.model_path)
             print('Loading pretrained ImageNet model......from {}'.format(self.model_path))
             
@@ -275,6 +295,7 @@ class build_part_attention_vit(nn.Module):
         elif cfg.MODEL.TRANSFORMER_TYPE == 'vit_large_patch16_224_TransReID':
             self.in_planes = 1024
         if self.pretrain_choice == 'imagenet':
+            download_if_not_exists(self.model_path, path)
             self.base.load_param(self.model_path)
             print('Loading pretrained ImageNet model......from {}'.format(self.model_path))
 
