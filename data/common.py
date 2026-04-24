@@ -25,11 +25,11 @@ class CommDataset(Dataset):
         return len(self.img_items)
 
     def __getitem__(self, index):
-        if len(self.img_items[index]) > 3:
-            img_path, pid, camid, others = self.img_items[index]
-        else:
-            img_path, pid, camid = self.img_items[index]
-            others = ''
+        item = self.img_items[index]
+        img_path = item[0]
+        pid = item[1]
+        camid = item[2]
+        others = item[3] if len(item) > 3 else ''
         img = read_image(img_path)
         
         # Custom logic interceptor for horizontal flip

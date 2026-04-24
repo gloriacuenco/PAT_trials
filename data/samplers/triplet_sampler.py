@@ -228,7 +228,8 @@ class RandomIdentitySampler(Sampler):
         self.num_pids_per_batch = self.batch_size // self.num_instances
         self.index_dic = defaultdict(list) #dict with list value
         #{783: [0, 5, 116, 876, 1554, 2041],...,}
-        for index, (_, pid, _, _) in enumerate(self.data_source):
+        for index, info in enumerate(self.data_source):
+            pid = info[1]
             self.index_dic[pid].append(index)
         self.pids = list(self.index_dic.keys())
 
