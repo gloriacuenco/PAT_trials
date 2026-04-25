@@ -13,7 +13,7 @@ MODEL:
 INPUT:
   SIZE_TRAIN: [256,128]
   SIZE_TEST: [256,128]
-  DO_FLIP: False
+  DO_FLIP: True
   REA:
     ENABLED: False
     PROB: 0.5
