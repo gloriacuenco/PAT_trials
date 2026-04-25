@@ -13,7 +13,7 @@ MODEL:
 INPUT:
   SIZE_TRAIN: [256,128]
   SIZE_TEST: [256,128]
-  DO_FLIP: True
+  DO_FLIP: False
   REA:
     ENABLED: False
     PROB: 0.5
@@ -21,7 +21,7 @@ INPUT:
     SL: 0.02
     R1: 0.3
   CJ:
-    ENABLED: False
+    ENABLED: True
     PROB: 0.5
     BRIGHTNESS: 0.15
     CONTRAST: 0.15
