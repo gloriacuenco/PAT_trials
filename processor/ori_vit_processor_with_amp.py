@@ -79,7 +79,17 @@ def ori_vit_do_train_with_amp(cfg,
                     score, feat = model(img)
                     loss = loss_fn(score, feat, target, macro_classes=macro_classes)
 
+            # NaN safety check
+            if torch.isnan(loss) or torch.isinf(loss):
+                logger.warning("NaN/Inf detected in loss at Epoch[{}] Iteration[{}]. Skipping batch.".format(epoch, n_iter+1))
+                optimizer.zero_grad()
+                continue
+
             scaler.scale(loss).backward()
+
+            # Gradient clipping for stability
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             scaler.step(optimizer)
             scaler.update()
@@ -156,15 +166,9 @@ def ori_vit_do_train_with_amp(cfg,
         val_loader, num_query = build_reid_test_loader(cfg, testname)
         do_inference(cfg, eval_model, val_loader, num_query)
     
-    # remove useless path files
-    del_list = os.listdir(log_path)
-    for fname in del_list:
-        if '.pth' in fname:
-            os.remove(os.path.join(log_path, fname))
-            print('removing {}. '.format(os.path.join(log_path, fname)))
-    # save final checkpoint
-    print('saving final checkpoint.\nDo not interrupt the program!!!')
-    torch.save(eval_model.state_dict(), os.path.join(log_path, cfg.MODEL.NAME + '_{}.pth'.format(epoch)))
+    # save final best checkpoint
+    print('saving final best checkpoint.\nDo not interrupt the program!!!')
+    torch.save(eval_model.state_dict(), os.path.join(log_path, cfg.MODEL.NAME + '_best.pth'))
     print('done!')
 
 def do_inference(cfg,
