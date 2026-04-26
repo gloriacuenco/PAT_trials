@@ -5,7 +5,7 @@ MODEL:
   IF_WITH_CENTER: 'no'
   NAME: 'part_attention_vit'
   NO_MARGIN: True
-  METRIC_LOSS_TYPE: 'triplet' #'class_aware_triplet'
+  METRIC_LOSS_TYPE: 'class_aware_triplet'
   DEVICE_ID: ('0')
   TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
   STRIDE_SIZE: [16, 16]
@@ -15,7 +15,7 @@ INPUT:
   SIZE_TEST: [256,128]
   DO_FLIP: False
   REA:
-    ENABLED: True
+    ENABLED: False
     PROB: 0.5
     SH: 0.15
     SL: 0.02
