@@ -42,6 +42,7 @@ def build_reid_train_loader(cfg):
             dataset = DATASET_REGISTRY.get(d)(root=_root, combineall=cfg.DATASETS.COMBINEALL)
         if comm.is_main_process():
             dataset.show_train()
+        filtered_dataset_train = []
         for i, x in enumerate(dataset.train):
             train_item = list(dataset.train[i])
             if len(train_item) < 4:
@@ -52,13 +53,18 @@ def build_reid_train_loader(cfg):
                 add_info = {}
                 train_item[3] = add_info
 
+            macro_class = add_info.get('macro_class', '')
+            if len(cfg.DATASETS.FILTER_CLASSES) > 0 and macro_class not in cfg.DATASETS.FILTER_CLASSES:
+                continue
+
             if cfg.DATALOADER.CAMERA_TO_DOMAIN:
                 add_info['domains'] = train_item[2]
                 camera_all.append(train_item[2])
             else:
                 add_info['domains'] = int(domain_idx)
             
-            dataset.train[i] = tuple(train_item)
+            filtered_dataset_train.append(tuple(train_item))
+        dataset.train = filtered_dataset_train
         domain_idx += 1
         train_items.extend(dataset.train)
 

@@ -135,7 +135,8 @@ _C.DATASETS.TEST = ('DukeMTMC',)
 _C.DATASETS.ROOT_DIR = ('../data')
 # combine both train and test sets
 _C.DATASETS.COMBINEALL = False
-
+# Filter classes by macro class (empty list means no filtering)
+_C.DATASETS.FILTER_CLASSES = []
 
 # -----------------------------------------------------------------------------
 # DataLoader

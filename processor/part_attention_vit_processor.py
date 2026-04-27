@@ -48,7 +48,7 @@ def part_attention_vit_do_train_with_amp(cfg,
     # ds_loss_meter = AverageMeter()
     acc_meter = AverageMeter()
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=cfg.TEST.RE_RANKING)
     scaler = amp.GradScaler(init_scale=512)
     batch_size = cfg.SOLVER.IMS_PER_BATCH
     # train
@@ -225,7 +225,7 @@ def do_inference(cfg,
     logger = logging.getLogger("PAT.test")
     logger.info("Enter inferencing")
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=cfg.TEST.RE_RANKING)
 
     evaluator.reset()
 

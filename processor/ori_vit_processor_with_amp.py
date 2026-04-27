@@ -42,7 +42,7 @@ def ori_vit_do_train_with_amp(cfg,
     loss_meter = AverageMeter()
     acc_meter = AverageMeter()
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=cfg.TEST.RE_RANKING)
     scaler = amp.GradScaler(init_scale=512)
 
     best_mAP = 0.0
@@ -179,7 +179,7 @@ def do_inference(cfg,
     logger = logging.getLogger("PAT.test")
     logger.info("Enter inferencing")
 
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM)
+    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg.TEST.FEAT_NORM, reranking=cfg.TEST.RE_RANKING)
 
     evaluator.reset()
 
