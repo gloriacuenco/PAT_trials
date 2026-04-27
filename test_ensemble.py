@@ -1,21 +1,20 @@
 import os
 import time
 import argparse
+import numpy as np
 import torch
 import torch.nn as nn
 from config import cfg
 from data.build_DG_dataloader import build_reid_test_loader
 from model import make_model
 from utils.logger import setup_logger
-from utils.metrics import R1_mAP_eval
+from utils.metrics import euclidean_distance, eval_func
+from utils.reranking import re_ranking
 
 def do_inference_ensemble(cfg1, cfg2, model1, model2, val_loader1, val_loader2, num_query):
     device = "cuda"
     logger = setup_logger("PAT.test", cfg1.LOG_ROOT, if_train=False)
-    logger.info("Enter ensembling inference")
-
-    evaluator = R1_mAP_eval(num_query, max_rank=50, feat_norm=cfg1.TEST.FEAT_NORM, reranking=cfg1.TEST.RE_RANKING)
-    evaluator.reset()
+    logger.info("Enter minimum distance ensembling inference")
 
     if device:
         if torch.cuda.device_count() > 1:
@@ -30,11 +29,13 @@ def do_inference_ensemble(cfg1, cfg2, model1, model2, val_loader1, val_loader2, 
     
     t0 = time.time()
     
+    feats1, feats2, pids, camids = [], [], [], []
+
     for (batch1, batch2) in zip(val_loader1, val_loader2):
         img1 = batch1['images']
         img2 = batch2['images']
         pid = batch1['targets']
-        camids = batch1['camid']
+        camid = batch1['camid']
         
         with torch.no_grad():
             img1 = img1.to(device)
@@ -44,18 +45,60 @@ def do_inference_ensemble(cfg1, cfg2, model1, model2, val_loader1, val_loader2, 
             feat1 = model1(img1)
             if isinstance(feat1, tuple) or isinstance(feat1, list):
                 feat1 = feat1[-1] if isinstance(feat1, list) else feat1[0]
+            feats1.append(feat1.cpu())
                 
             # Model 2 features
             feat2 = model2(img2)
             if isinstance(feat2, tuple) or isinstance(feat2, list):
                 feat2 = feat2[-1] if isinstance(feat2, list) else feat2[0]
-                
-            # Concatenate features
-            feat = torch.cat([feat1, feat2], dim=1)
+            feats2.append(feat2.cpu())
             
-            evaluator.update((feat, pid, camids))
+        pids.extend(np.asarray(pid))
+        camids.extend(np.asarray(camid))
 
-    cmc, mAP, _, _, _, _, _ = evaluator.compute()
+    feats1 = torch.cat(feats1, dim=0)
+    feats2 = torch.cat(feats2, dim=0)
+    
+    if cfg1.TEST.FEAT_NORM:
+        feats1 = torch.nn.functional.normalize(feats1, dim=1, p=2)
+    if cfg2.TEST.FEAT_NORM:
+        feats2 = torch.nn.functional.normalize(feats2, dim=1, p=2)
+
+    # query / gallery for model 1
+    qf1 = feats1[:num_query]
+    gf1 = feats1[num_query:]
+    
+    # query / gallery for model 2
+    qf2 = feats2[:num_query]
+    gf2 = feats2[num_query:]
+    
+    q_pids = np.asarray(pids[:num_query])
+    g_pids = np.asarray(pids[num_query:])
+    q_camids = np.asarray(camids[:num_query])
+    g_camids = np.asarray(camids[num_query:])
+
+    # Compute distances for Model 1
+    if cfg1.TEST.RE_RANKING:
+        logger.info('=> Computing Re-ranking DistMat for Model 1')
+        distmat1 = re_ranking(qf1, gf1, k1=50, k2=15, lambda_value=0.3)
+    else:
+        logger.info('=> Computing Euclidean DistMat for Model 1')
+        distmat1 = euclidean_distance(qf1, gf1)
+
+    # Compute distances for Model 2
+    if cfg2.TEST.RE_RANKING:
+        logger.info('=> Computing Re-ranking DistMat for Model 2')
+        distmat2 = re_ranking(qf2, gf2, k1=50, k2=15, lambda_value=0.3)
+    else:
+        logger.info('=> Computing Euclidean DistMat for Model 2')
+        distmat2 = euclidean_distance(qf2, gf2)
+
+    # MINIMUM DISTANCE FUSION
+    logger.info('=> Applying Minimum Distance Fusion')
+    distmat = np.minimum(distmat1, distmat2)
+
+    cmc, mAP = eval_func(distmat, q_pids, g_pids, q_camids, g_camids)
+    
     logger.info("Validation Results ")
     logger.info("mAP: {:.1%}".format(mAP))
     for r in [1, 5, 10]:
