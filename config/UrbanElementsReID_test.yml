@@ -11,8 +11,8 @@ MODEL:
   STRIDE_SIZE: [16, 16]
 
 INPUT:
-  SIZE_TRAIN: [256,128]
-  SIZE_TEST: [256,128]
+  SIZE_TRAIN: [224,224]
+  SIZE_TEST: [224,224]
   REA:
     ENABLED: False
   PIXEL_MEAN: [0.5, 0.5, 0.5]
@@ -24,7 +24,7 @@ INPUT:
 DATASETS:
   TRAIN: ('UrbanElementsReID',)
   TEST: ('UrbanElementsReID_test',)
-  ROOT_DIR: '/kaggle/input/datasets/gloriagcuenco/urban2026/Urban2026'
+  ROOT_DIR: '/kaggle/input/datasets/gloriagarcacuenco/urban2026/Urban2026'
 
 DATALOADER:
   SAMPLER: 'softmax_triplet'
