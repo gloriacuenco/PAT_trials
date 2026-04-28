@@ -8,6 +8,45 @@ import torch.nn as nn
 
 from .backbones.resnet import BasicBlock, ResNet, Bottleneck
 from .backbones import vit_base_patch16_224_TransReID, vit_small_patch16_224_TransReID, deit_small_patch16_224_TransReID
+import torch.nn.functional as F
+
+def infer_old_hw(num_patches):
+    if num_patches == 196:
+        return 14, 14
+    elif num_patches == 128:
+        return 16, 8
+    elif num_patches == 256:
+        return 16, 16
+    elif num_patches == 512:
+        return 32, 16
+    else:
+        s = int(math.sqrt(num_patches))
+        return s, s
+
+def resize_pos_embed_generic(posemb, posemb_new, hight, width):
+    ntok_new = posemb_new.shape[1]
+    ntok_old = posemb.shape[1]
+    
+    # Calculate how many extra tokens there are (cls, part tokens, etc.)
+    # We assume the new pos_embed has hight*width grid patches.
+    # Therefore, the number of extra tokens is ntok_new - hight*width
+    num_extra_tokens = ntok_new - (hight * width)
+    
+    if num_extra_tokens < 0:
+        # Fallback if something is wrong
+        return posemb_new
+        
+    posemb_token = posemb[:, :num_extra_tokens]
+    posemb_grid = posemb[0, num_extra_tokens:]
+    
+    old_h, old_w = infer_old_hw(len(posemb_grid))
+    
+    print('Resized position embedding from size:{} to size: {} with height:{} width: {}'.format(posemb.shape, posemb_new.shape, hight, width))
+    posemb_grid = posemb_grid.reshape(1, old_h, old_w, -1).permute(0, 3, 1, 2)
+    posemb_grid = F.interpolate(posemb_grid, size=(hight, width), mode='bilinear')
+    posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, hight * width, -1)
+    posemb = torch.cat([posemb_token, posemb_grid], dim=1)
+    return posemb
 
 # alter this to your pre-trained file name
 lup_path_name = {
@@ -242,7 +281,17 @@ class build_vit(nn.Module):
                 continue
             if 'bottleneck' in i:
                 continue
-            self.state_dict()[i.replace('module.', '')].copy_(param_dict[i])
+            key = i.replace('module.', '')
+            if key in self.state_dict():
+                if self.state_dict()[key].shape != param_dict[i].shape and 'pos_embed' in key:
+                    print('resizing pos_embed in build_vit...')
+                    param_dict[i] = resize_pos_embed_generic(
+                        param_dict[i], 
+                        self.state_dict()[key], 
+                        self.base.patch_embed.num_y, 
+                        self.base.patch_embed.num_x
+                    )
+                self.state_dict()[key].copy_(param_dict[i])
         print('Loading trained model from {}'.format(trained_path))
 
     def load_param_finetune(self, model_path):
@@ -324,7 +373,17 @@ class build_part_attention_vit(nn.Module):
         for i in param_dict:
             if 'classifier' in i: # drop classifier
                 continue
-            self.state_dict()[i.replace('module.', '')].copy_(param_dict[i])
+            key = i.replace('module.', '')
+            if key in self.state_dict():
+                if self.state_dict()[key].shape != param_dict[i].shape and 'pos_embed' in key:
+                    print('resizing pos_embed in build_part_attention_vit...')
+                    param_dict[i] = resize_pos_embed_generic(
+                        param_dict[i], 
+                        self.state_dict()[key], 
+                        self.base.patch_embed.num_y, 
+                        self.base.patch_embed.num_x
+                    )
+                self.state_dict()[key].copy_(param_dict[i])
         print('Loading trained model from {}'.format(trained_path))
 
     def load_param_finetune(self, model_path):
