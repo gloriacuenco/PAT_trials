@@ -8,11 +8,11 @@ MODEL:
   NO_MARGIN: True
   DEVICE_ID: ('0')
   TRANSFORMER_TYPE: 'vit_large_patch16_224_TransReID'
-  STRIDE_SIZE: [16, 16]
+  STRIDE_SIZE: [12, 12]
 
 INPUT:
-  SIZE_TRAIN: [384,384]
-  SIZE_TEST: [384,384]
+  SIZE_TRAIN: [256, 256]
+  SIZE_TEST: [256, 256]
   REA:
     ENABLED: False
   PIXEL_MEAN: [0.5, 0.5, 0.5]
@@ -35,12 +35,12 @@ SOLVER:
   OPTIMIZER_NAME: 'SGD'
   MAX_EPOCHS: 40
   BASE_LR: 0.001 # 0.0004 for msmt
-  IMS_PER_BATCH: 8
+  IMS_PER_BATCH: 16
   WARMUP_METHOD: 'linear'
   LARGE_FC_LR: False
   CHECKPOINT_PERIOD: 5
   LOG_PERIOD: 60
-  EVAL_PERIOD: 1
+  EVAL_PERIOD: 5
   WEIGHT_DECAY:  1e-4
   WEIGHT_DECAY_BIAS: 1e-4
   BIAS_LR_FACTOR: 2
@@ -48,7 +48,7 @@ SOLVER:
 
 TEST:
   EVAL: True
-  IMS_PER_BATCH: 8
+  IMS_PER_BATCH: 16
   RE_RANKING: True
   WEIGHT: "./models/model/part_attention_vit_60.pth" #test 
   NECK_FEAT: 'before'
