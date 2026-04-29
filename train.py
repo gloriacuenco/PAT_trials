@@ -23,6 +23,8 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
 
+os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="ReID Training")
     parser.add_argument(

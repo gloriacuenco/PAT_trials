@@ -46,8 +46,8 @@ DATALOADER:
 SOLVER:
   OPTIMIZER_NAME: 'SGD'
   MAX_EPOCHS: 40
-  BASE_LR: 0.001 # 0.0004 for msmt
-  IMS_PER_BATCH: 32
+  BASE_LR: 0.00025 # adjusted for batch size 8
+  IMS_PER_BATCH: 8
   WARMUP_METHOD: 'linear'
   LARGE_FC_LR: False
   CHECKPOINT_PERIOD: 5
@@ -60,7 +60,7 @@ SOLVER:
 
 TEST:
   EVAL: True
-  IMS_PER_BATCH: 128
+  IMS_PER_BATCH: 16
   RE_RANKING: False
   WEIGHT: ''
   NECK_FEAT: 'before'
