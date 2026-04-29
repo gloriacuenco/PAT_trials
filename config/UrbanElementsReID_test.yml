@@ -1,18 +1,18 @@
 MODEL:
   PRETRAIN_CHOICE: 'imagenet'
   PRETRAIN_PATH: "./pretrained/"
-  METRIC_LOSS_TYPE: 'triplet'
+  METRIC_LOSS_TYPE: 'class_aware_triplet'
   IF_LABELSMOOTH: 'on'
   IF_WITH_CENTER: 'no'
   NAME: 'part_attention_vit'
   NO_MARGIN: True
   DEVICE_ID: ('0')
-  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
+  TRANSFORMER_TYPE: 'vit_large_patch16_224_TransReID'
   STRIDE_SIZE: [16, 16]
 
 INPUT:
-  SIZE_TRAIN: [224,224]
-  SIZE_TEST: [224,224]
+  SIZE_TRAIN: [384,384]
+  SIZE_TEST: [384,384]
   REA:
     ENABLED: False
   PIXEL_MEAN: [0.5, 0.5, 0.5]
@@ -49,7 +49,7 @@ SOLVER:
 TEST:
   EVAL: True
   IMS_PER_BATCH: 128
-  RE_RANKING: False
+  RE_RANKING: True
   WEIGHT: "./models/model/part_attention_vit_60.pth" #test 
   NECK_FEAT: 'before'
   FEAT_NORM: True

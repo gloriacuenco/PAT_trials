@@ -5,14 +5,14 @@ MODEL:
   IF_WITH_CENTER: 'no'
   NAME: 'part_attention_vit'
   NO_MARGIN: True
-  METRIC_LOSS_TYPE: 'triplet'
+  METRIC_LOSS_TYPE: 'class_aware_triplet'
   DEVICE_ID: ('0')
-  TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
+  TRANSFORMER_TYPE: 'vit_large_patch16_224_TransReID'
   STRIDE_SIZE: [16, 16]
 
 INPUT:
-  SIZE_TRAIN: [224,224]
-  SIZE_TEST: [224,224]
+  SIZE_TRAIN: [384,384]
+  SIZE_TEST: [384,384]
   DO_FLIP: False
   REA:
     ENABLED: False
@@ -47,7 +47,7 @@ SOLVER:
   OPTIMIZER_NAME: 'SGD'
   MAX_EPOCHS: 40
   BASE_LR: 0.001 # 0.0004 for msmt
-  IMS_PER_BATCH: 64
+  IMS_PER_BATCH: 32
   WARMUP_METHOD: 'linear'
   LARGE_FC_LR: False
   CHECKPOINT_PERIOD: 5
