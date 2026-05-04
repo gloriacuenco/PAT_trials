@@ -533,12 +533,13 @@ class MacroClassBalancedSampler(Sampler):
         return final_idxs
 
     def __iter__(self):
-        start = self._rank
-        yield from itertools.islice(self._infinite_indices(), start, None, self._world_size)
+        """Return a finite iterator covering one epoch of balanced indices."""
+        return iter(self._get_epoch_indices())
 
-    def _infinite_indices(self):
-        np.random.seed(self._seed)
-        while True:
-            indices = self._get_epoch_indices()
-            yield from indices
-
+    def __len__(self):
+        # Approximate: epoch length is limited by the smallest class
+        min_class_batches = min(
+            sum(len(self.pid_index[p]) for p in self.macro_class_pids[cls]) // self.num_instances
+            for cls in self.macro_classes
+        )
+        return min_class_batches * self.num_macro_classes * self.num_instances
