@@ -11,8 +11,8 @@ MODEL:
   STRIDE_SIZE: [12, 12]
 
 INPUT:
-  SIZE_TRAIN: [256, 256]
-  SIZE_TEST: [256, 256]
+  SIZE_TRAIN: [224, 224]
+  SIZE_TEST: [224, 224]
   REA:
     ENABLED: False
   PIXEL_MEAN: [0.5, 0.5, 0.5]
@@ -48,7 +48,7 @@ SOLVER:
 
 TEST:
   EVAL: True
-  IMS_PER_BATCH: 16
+  IMS_PER_BATCH: 32
   RE_RANKING: True
   WEIGHT: "./models/model/part_attention_vit_60.pth" #test 
   NECK_FEAT: 'before'

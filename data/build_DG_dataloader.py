@@ -79,7 +79,7 @@ def build_reid_train_loader(cfg):
         drop_last=cfg.DATALOADER.DROP_LAST,
         flag1=cfg.DATALOADER.NAIVE_WAY,
         flag2=cfg.DATALOADER.DELETE_REM,
-        cfg = cfg)
+        cfg=cfg)
 
     return train_loader
 
@@ -177,17 +177,29 @@ def fast_batch_collator(batched_inputs):
 def make_sampler(train_set, num_batch, num_instance, num_workers,
                  mini_batch_size, drop_last=True, flag1=True, flag2=True, seed=None, cfg=None):
 
-    if flag1:
+    sampler_name = cfg.DATALOADER.SAMPLER if cfg is not None else 'softmax_triplet'
+
+    if sampler_name == 'macro_class_balanced':
+        data_sampler = samplers.MacroClassBalancedSampler(
+            train_set.img_items, num_batch, num_instance
+        )
+        # MacroClassBalancedSampler yields individual indices; wrap with BatchSampler
+        batch_sampler = torch.utils.data.sampler.BatchSampler(
+            data_sampler, mini_batch_size, drop_last=False
+        )
+    elif flag1:
         data_sampler = samplers.RandomIdentitySampler(train_set.img_items,
                                                       mini_batch_size, num_instance)
+        batch_sampler = torch.utils.data.sampler.BatchSampler(data_sampler, mini_batch_size, drop_last)
     else:
         data_sampler = samplers.DomainSuffleSampler(train_set.img_items,
                                                      num_batch, num_instance, flag2, seed, cfg)
-    batch_sampler = torch.utils.data.sampler.BatchSampler(data_sampler, mini_batch_size, drop_last)
+        batch_sampler = torch.utils.data.sampler.BatchSampler(data_sampler, mini_batch_size, drop_last)
+
     train_loader = torch.utils.data.DataLoader(
         train_set,
         num_workers=num_workers,
         batch_sampler=batch_sampler,
         collate_fn=fast_batch_collator,
     )
-    return train_loader
+    return train_loader

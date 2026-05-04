@@ -419,3 +419,126 @@ class DomainSuffleSampler(Sampler):
         while True:
             indices = self._get_epoch_indices()
             yield from indices
+
+
+class MacroClassBalancedSampler(Sampler):
+    """
+    Sample a balanced number of identities from each macro class per batch.
+
+    Each batch step contributes:
+        pids_per_class * num_macro_classes * num_instances images
+
+    where pids_per_class = (batch_size // num_instances) // num_macro_classes.
+
+    This ensures the model sees an equal number of traffic signs, rubbish bins,
+    containers, and crosswalks regardless of class imbalance in the dataset.
+
+    Args:
+        data_source: list of (img_path, pid, camid, others_dict) tuples.
+            others_dict must contain 'macro_class' key.
+        batch_size: total images per batch (IMS_PER_BATCH).
+        num_instances: number of images per identity per batch.
+        seed: random seed.
+    """
+
+    def __init__(self, data_source, batch_size: int, num_instances: int,
+                 seed: Optional[int] = None):
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.num_instances = num_instances
+
+        # --- Build index structures ---
+        # macro_class -> list of pids
+        self.macro_class_pids = defaultdict(set)
+        # pid -> list of dataset indices
+        self.pid_index = defaultdict(list)
+
+        for idx, info in enumerate(data_source):
+            pid = info[1]
+            others = info[3] if len(info) > 3 else {}
+            macro_class = (others.get('macro_class', '') if isinstance(others, dict) else '')
+            if not macro_class:
+                macro_class = 'unknown'
+            self.macro_class_pids[macro_class].add(pid)
+            self.pid_index[pid].append(idx)
+
+        # Sort for determinism
+        self.macro_classes = sorted(self.macro_class_pids.keys())
+        self.num_macro_classes = len(self.macro_classes)
+
+        # Convert sets to sorted lists
+        self.macro_class_pids = {
+            cls: sorted(pids) for cls, pids in self.macro_class_pids.items()
+        }
+
+        # Number of identities to pick per class per batch step
+        self.pids_per_class = max(1, (batch_size // num_instances) // self.num_macro_classes)
+        self.effective_batch_size = self.pids_per_class * self.num_macro_classes * num_instances
+
+        # Print summary
+        print(f'\n[MacroClassBalancedSampler] {self.num_macro_classes} macro classes detected:')
+        for cls in self.macro_classes:
+            n_ids = len(self.macro_class_pids[cls])
+            n_imgs = sum(len(self.pid_index[p]) for p in self.macro_class_pids[cls])
+            print(f'  [{cls}]: {n_ids} identities, {n_imgs} images')
+        print(f'  Sampling {self.pids_per_class} identities/class → '
+              f'{self.effective_batch_size} images/batch (configured: {batch_size})\n')
+
+        if seed is None:
+            seed = comm.shared_random_seed()
+        self._seed = int(seed)
+        self._rank = comm.get_rank()
+        self._world_size = comm.get_world_size()
+
+    def _build_pool(self):
+        """
+        For each macro class, build a shuffled list of image-index groups.
+        Each group is a list of `num_instances` image indices for one identity.
+        """
+        class_pools = {}
+        for cls in self.macro_classes:
+            pool = []
+            for pid in self.macro_class_pids[cls]:
+                idxs = copy.deepcopy(self.pid_index[pid])
+                # Ensure we have at least num_instances indices
+                if len(idxs) < self.num_instances:
+                    idxs = list(np.random.choice(idxs, size=self.num_instances, replace=True))
+                elif len(idxs) % self.num_instances != 0:
+                    # Pad to a multiple of num_instances
+                    extra = self.num_instances - (len(idxs) % self.num_instances)
+                    idxs += list(np.random.choice(idxs, size=extra, replace=False))
+                np.random.shuffle(idxs)
+                # Chunk into groups of num_instances
+                for i in range(0, len(idxs), self.num_instances):
+                    pool.append(idxs[i:i + self.num_instances])
+            np.random.shuffle(pool)
+            class_pools[cls] = pool
+        return class_pools
+
+    def _get_epoch_indices(self):
+        class_pools = self._build_pool()
+        final_idxs = []
+
+        while True:
+            # Stop when any class has fewer groups than pids_per_class
+            if not all(len(class_pools[cls]) >= self.pids_per_class
+                       for cls in self.macro_classes):
+                break
+            # Sample pids_per_class groups from each class
+            for cls in self.macro_classes:
+                for _ in range(self.pids_per_class):
+                    group = class_pools[cls].pop()
+                    final_idxs.extend(group)
+
+        return final_idxs
+
+    def __iter__(self):
+        start = self._rank
+        yield from itertools.islice(self._infinite_indices(), start, None, self._world_size)
+
+    def _infinite_indices(self):
+        np.random.seed(self._seed)
+        while True:
+            indices = self._get_epoch_indices()
+            yield from indices
+
