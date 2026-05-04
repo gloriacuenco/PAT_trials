@@ -125,3 +125,40 @@ def build_transforms(cfg, is_train=True, is_fake=False):
             T.Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])
         ])
     return T.Compose(res)
+
+
+def build_tta_transforms(cfg):
+    """
+    Build a list of test transforms for Test-Time Augmentation (TTA).
+
+    Each transform resizes the image to a different intermediate scale before
+    resizing again to SIZE_TEST. This gives the model slightly different context
+    per scale (zoomed in vs zoomed out) without using class-sensitive flips.
+
+    Returns:
+        List[T.Compose]: one transform per TTA scale in cfg.TEST.TTA_SCALES.
+    """
+    size_test = cfg.INPUT.SIZE_TEST
+    tta_scales = cfg.TEST.TTA_SCALES
+    normalize = T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+
+    transforms = []
+    for scale in tta_scales:
+        if scale == size_test[0]:
+            # Standard: direct resize
+            tfm = T.Compose([
+                T.Resize(size_test, interpolation=3),
+                T.ToTensor(),
+                normalize,
+            ])
+        else:
+            # Zoom variant: resize to larger/smaller scale first, then center-crop
+            tfm = T.Compose([
+                T.Resize(scale, interpolation=3),
+                T.CenterCrop(size_test),
+                T.ToTensor(),
+                normalize,
+            ])
+        transforms.append(tfm)
+    return transforms
+

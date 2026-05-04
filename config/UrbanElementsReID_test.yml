@@ -8,7 +8,7 @@ MODEL:
   NO_MARGIN: True
   DEVICE_ID: ('0')
   TRANSFORMER_TYPE: 'vit_base_patch16_224_TransReID'
-  STRIDE_SIZE: [12, 12]
+  STRIDE_SIZE: [16, 16]
 
 INPUT:
   SIZE_TRAIN: [224, 224]
@@ -50,9 +50,11 @@ TEST:
   EVAL: True
   IMS_PER_BATCH: 32
   RE_RANKING: True
-  WEIGHT: "./models/model/part_attention_vit_60.pth" #test 
+  WEIGHT: "./models/model/part_attention_vit_best.pth"
   NECK_FEAT: 'before'
   FEAT_NORM: True
+  TTA: True
+  TTA_SCALES: [224, 256, 192]  # standard + zoomed-out + zoomed-in
 
 LOG_ROOT: 'models/' # root of log file
 TB_LOG_ROOT: './tb_log/'

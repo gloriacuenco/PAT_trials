@@ -234,6 +234,17 @@ _C.TEST.DIST_MAT = "dist_mat.npy"
 _C.TEST.EVAL = False
 
 # ---------------------------------------------------------------------------- #
+# Test-Time Augmentation (TTA)
+# ---------------------------------------------------------------------------- #
+# Enable TTA: run inference with multiple resize scales and average features
+_C.TEST.TTA = False
+# List of resize sizes used for TTA (e.g., 224 = standard, 256 = zoomed out)
+# The model input size remains SIZE_TEST; images are resized to each TTA_SCALE
+# before being resized again to SIZE_TEST for the center crop variant.
+_C.TEST.TTA_SCALES = [224, 256]
+
+
+# ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #
 # root Path to checkpoint and saved log of trained model
