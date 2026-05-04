@@ -200,6 +200,11 @@ if __name__ == "__main__":
         "--weight", default="", help="Path to model weights (.pth)", type=str
     )
     parser.add_argument(
+        "--track", default="./submission",
+        help="Output path prefix for submission files (no extension). "
+             "Generates <track>.txt and <track>_submission.csv", type=str
+    )
+    parser.add_argument(
         "opts", help="Modify config options via command line", default=None,
         nargs=argparse.REMAINDER
     )
@@ -209,7 +214,7 @@ if __name__ == "__main__":
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
 
-    # Enable TTA
+    # Enable TTA and override weight if given on command line
     cfg.defrost()
     cfg.TEST.TTA = True
     if args.weight:
@@ -231,4 +236,33 @@ if __name__ == "__main__":
 
     for testname in cfg.DATASETS.TEST:
         logger.info("Dataset: {}".format(testname))
-        do_inference_tta(cfg, model, testname)
+        distmat = do_inference_tta(cfg, model, testname)
+
+        # ------------------------------------------------------------------ #
+        # Generate submission files (same format as utils/update.py)
+        # ------------------------------------------------------------------ #
+        import csv as csv_module
+
+        # Top-100 gallery indices per query (1-indexed, as expected by competition)
+        indices = np.argsort(distmat, axis=1)[:, :100]
+        num_queries = len(indices)
+
+        # Write .txt ranking file
+        os.makedirs(os.path.dirname(os.path.abspath(args.track)), exist_ok=True)
+        txt_path = args.track + ".txt"
+        with open(txt_path, 'wb') as f_w:
+            for i in range(num_queries):
+                write_line = ' '.join(map(str, (indices[i] + 1).tolist())) + '\n'
+                f_w.write(write_line.encode())
+        logger.info("Ranking written to: {}".format(txt_path))
+
+        # Write submission CSV
+        csv_path = args.track + "_submission.csv"
+        query_names = ["{:06d}.jpg".format(i) for i in range(1, num_queries + 1)]
+        with open(csv_path, 'w', newline='') as f_csv:
+            writer = csv_module.writer(f_csv)
+            writer.writerow(['imageName', 'Corresponding Indexes'])
+            for name, idx_row in zip(query_names, indices):
+                writer.writerow([name, ' '.join(map(str, idx_row + 1))])
+        logger.info("Submission CSV written to: {}".format(csv_path))
+
